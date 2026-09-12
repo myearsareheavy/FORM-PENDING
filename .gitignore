@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.venv/
+venv/
+diagnostics/screenshots/
+diagnostics/out_to_lunch.jsonl
