@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from form_pending.catalog import FLOOR_COUNT
+from form_pending.catalog import FEMININE_NAMES, FLOOR_COUNT, MASCULINE_NAMES
 from form_pending.generate import generate_run
 from form_pending.interact import resolve_talk
 from form_pending.rng import normalize_seed
@@ -116,6 +116,44 @@ class GenerationTests(unittest.TestCase):
             self.assertEqual(intake["floor"], 1)
             dist = ((intake["x"] - 8.5) ** 2 + (intake["y"] - 18.5) ** 2) ** 0.5
             self.assertLess(dist, 4.0, "intake should be in the lobby")
+
+    def test_handlers_speak_first_person(self):
+        for world in self.worlds:
+            by_id = {n["id"]: n for n in world["npcs"]}
+            for node in world["nodes"]:
+                npc = by_id[node["npc_id"]]
+                first = npc["name"].split()[0]
+                for k in npc["knowledge"]:
+                    if k.get("type") != "handles":
+                        continue
+                    text = k["text"]
+                    self.assertFalse(text.startswith(first + " "), f"{npc['name']}: {text}")
+                    for pat in (
+                        f"{first} in ",
+                        f"{first} at ",
+                        f"{first} keeps",
+                        f"{first} has to",
+                        f"{first} will ",
+                        f"That's me. {first}",
+                    ):
+                        self.assertNotIn(pat, text, f"{npc['name']} self-ref: {text}")
+                    self.assertTrue(
+                        text.startswith("I ") or text.startswith("I'll ") or text.startswith("I'm "),
+                        f"expected first person from {npc['name']}: {text}",
+                    )
+
+    def test_name_matches_presentation(self):
+        fem = set(FEMININE_NAMES)
+        masc = set(MASCULINE_NAMES)
+        for world in self.worlds:
+            for npc in world["npcs"]:
+                first = npc["name"].split()[0]
+                pres = npc["appearance"].get("presentation")
+                if first in fem:
+                    self.assertEqual(pres, "feminine", npc["name"])
+                elif first in masc:
+                    self.assertEqual(pres, "masculine", npc["name"])
+                self.assertIn(pres, ("feminine", "masculine", "neutral"))
 
     def test_spawn_is_walkable(self):
         for world in self.worlds:

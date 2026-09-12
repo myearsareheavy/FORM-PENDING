@@ -108,10 +108,11 @@ class Game:
             "floor": start["floor"],
             "inventory": [world["start_doc"]],
             "appearance": {
-                "skin": (232, 198, 170),
+                "presentation": "neutral",
+                "skin": (236, 204, 176),
                 "hair_style": "short",
                 "hair_color": (42, 32, 24),
-                "shirt": (70, 92, 128),
+                "shirt": (62, 88, 132),
                 "accessory": "badge",
             },
             "filed": False,
@@ -314,6 +315,7 @@ class Game:
         if self.blocked(self.player["x"], self.player["y"]):
             self.player["x"] = 8.5
             self.player["y"] = 17.5
+        self.cam = self._target_cam()
         self.state = "playing"
         if self.closed():
             self.begin_ending("fail")
@@ -493,11 +495,9 @@ class Game:
         else:
             self.player["walk_t"] = 0.0
 
-        target = self._target_cam()
-        self.cam[0] += (target[0] - self.cam[0]) * min(1.0, dt * 8)
-        self.cam[1] += (target[1] - self.cam[1]) * min(1.0, dt * 8)
-        self.cam[0] = round(self.cam[0])
-        self.cam[1] = round(self.cam[1])
+        # Hard-follow the player. Quantizing or lerping here made the world
+        # hitch 1px while the sprite moved in floats.
+        self.cam = self._target_cam()
 
         self.tick_clock(dt)
 

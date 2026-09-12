@@ -1,5 +1,11 @@
 # Form Pending — Development Log
 
+## Polish pass (post-RC)
+
+- Handler dialogue is first person (`I keep the stamp`) instead of naming themselves in third person. Referrals to other people stay third person; duplicate first names use the full name.
+- First names are pooled as feminine / masculine / unisex and drive sprite presentation (hair, accessories, body silhouette).
+- Visuals: corridor runner, door slabs, elevator floor lamp, desk variants, speckled carpets (no stripe weave), clearer visitor lanyard vs clerks.
+
 ## Checkpoint 4
 
 Release candidate.

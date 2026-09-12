@@ -203,6 +203,7 @@ def generate_floor_layout(rng: Rng, floor_index: int, departments: list) -> dict
                 "room": room["id"],
                 "dept": room["dept"],
                 "floor": floor_index,
+                "variant": rng.int(0, 3),
             })
             placed += 1
 
@@ -230,6 +231,7 @@ def generate_floor_layout(rng: Rng, floor_index: int, departments: list) -> dict
                 "room": tile["room"],
                 "dept": tile["dept"],
                 "floor": floor_index,
+                "variant": rng.int(0, 3),
             })
 
     def place_prop(ptype, prefer_corridor=True):
@@ -412,33 +414,68 @@ def npc_for_step(shuffled, used, kind, floors_used):
     return pool[0] if pool else None
 
 
-def describe_need(node, npc, start_doc):
+def refer_name(npc, roster):
+    """First name if unique in this run; full name if another person shares it."""
     first = npc["name"].split()[0]
+    if sum(1 for n in roster if n["name"].split()[0] == first) > 1:
+        return npc["name"]
+    return first
+
+
+def describe_need(node, npc, start_doc, voice="third", who=None):
     kind = node["kind"]
+    dept = npc["department"]
+    floor = npc["floor"]
+    if voice == "first":
+        if kind == "file":
+            return (
+                f"I file {start_doc['code']} at this window once every attachment "
+                "is here. Not before."
+            )
+        if kind == "stamp":
+            return f"I keep the stamp here. {dept}, Floor {floor}."
+        if kind == "issue":
+            return f"I issue that form from {dept}."
+        if kind == "sign":
+            return f"I have to sign it. {npc['role']}, {dept}."
+        if kind == "copy":
+            return f"I can run the photocopy. {dept}."
+        if kind == "correct":
+            return "I'll put it on the correct color paper."
+        if kind == "verify":
+            return "I initial visitor slips. That's the whole job."
+        if kind == "notary":
+            return f"I'm the notary on duty. {dept}."
+        if kind == "approve":
+            return f"I have to initial an approval. {dept}."
+        if kind == "prior":
+            return "I can pull the prior-year copy."
+        return "I handle this part."
+    who = who or npc["name"].split()[0]
     if kind == "file":
         return (
-            f"{first} at {npc['department']} files {start_doc['code']} "
+            f"{who} at {dept} files {start_doc['code']} "
             "once every prerequisite is attached."
         )
     if kind == "stamp":
-        return f"{first} keeps the stamp. {npc['department']}, Floor {npc['floor']}."
+        return f"{who} keeps the stamp. {dept}, Floor {floor}."
     if kind == "issue":
-        return f"{first} issues the required form from {npc['department']}."
+        return f"{who} issues the required form from {dept}."
     if kind == "sign":
-        return f"{first} has to sign it. {npc['role']}, {npc['department']}."
+        return f"{who} has to sign it. {npc['role']}, {dept}."
     if kind == "copy":
-        return f"You need a photocopy. {first} in {npc['department']} will run it."
+        return f"You need a photocopy. {who} in {dept} will run it."
     if kind == "correct":
-        return f"{first} will put it on the correct color paper."
+        return f"{who} will put it on the correct color paper."
     if kind == "verify":
-        return f"Security has to initial a visitor slip. {first} handles that."
+        return f"Security has to initial a visitor slip. {who} handles that."
     if kind == "notary":
-        return f"It has to be notarized. {first} at {npc['department']} is on duty."
+        return f"It has to be notarized. {who} at {dept} is on duty."
     if kind == "approve":
-        return f"{first} in {npc['department']} has to initial an approval."
+        return f"{who} in {dept} has to initial an approval."
     if kind == "prior":
-        return f"Archives wants the prior-year copy. {first} can pull it."
-    return f"{first} handles the next step."
+        return f"Archives wants the prior-year copy. {who} can pull it."
+    return f"{who} handles the next step."
 
 
 def generate_npcs(rng: Rng, floors, departments) -> list:
@@ -455,10 +492,11 @@ def generate_npcs(rng: Rng, floors, departments) -> list:
             dept = next((d for d in floor_depts if d["id"] == desk["dept"]), None)
             if dept is None:
                 dept = rng.pick(floor_depts) if floor_depts else rng.pick(departments)
+            name, presentation = unique_name(rng, used_names)
             npc = {
                 "id": f"npc_{n}",
-                "name": unique_name(rng, used_names),
-                "appearance": make_appearance(rng),
+                "name": name,
+                "appearance": make_appearance(rng, presentation),
                 "department_id": dept["id"],
                 "department": dept["name"],
                 "handles": dept["handles"],
@@ -547,32 +585,18 @@ def assign_knowledge(rng: Rng, npcs, chain, start_doc):
         npc = by_id[node["npc_id"]]
         nxt = chain["nodes"][i + 1] if i + 1 < len(chain["nodes"]) else None
         next_npc = by_id[nxt["npc_id"]] if nxt else None
-        node["label"] = describe_need(node, npc, start_doc)
-        if node["kind"] == "file":
-            npc["knowledge"].append({
-                "type": "handles",
-                "text": (
-                    f"This window files {start_doc['code']} — once the attachments "
-                    "are complete. Not before."
-                ),
-                "fact": {"npc_id": npc["id"], "node_id": node["id"]},
-            })
-        else:
-            npc["knowledge"].append({
-                "type": "handles",
-                "text": rng.pick([
-                    f"This desk does that. {node['label']}",
-                    f"That's me. {node['label']}",
-                    f"You're in the right pile. {node['label']}",
-                ]),
-                "fact": {"npc_id": npc["id"], "node_id": node["id"]},
-            })
+        node["label"] = describe_need(node, npc, start_doc, voice="first")
+        npc["knowledge"].append({
+            "type": "handles",
+            "text": node["label"],
+            "fact": {"npc_id": npc["id"], "node_id": node["id"]},
+        })
         if next_npc:
             vague = rng.bool(0.45)
             landmark = FLOOR_DEFS[next_npc["floor"] - 1]["landmark"]
-            first = next_npc["name"].split()[0]
+            who = refer_name(next_npc, npcs)
             text = (
-                f"You'll need {first} for the rest. {next_npc['department']}, I think. Floor {next_npc['floor']}."
+                f"You'll need {who} for the rest. {next_npc['department']}, I think. Floor {next_npc['floor']}."
                 if vague
                 else (
                     f"{next_npc['name']} in {next_npc['department']} on Floor {next_npc['floor']}. "
@@ -627,18 +651,20 @@ def assign_knowledge(rng: Rng, npcs, chain, start_doc):
         adjacent = [c for c in chain_npcs if abs(c["floor"] - npc["floor"]) == 1]
         if local and rng.bool(0.7):
             t = rng.pick(local)
+            who = refer_name(t, npcs)
             npc["knowledge"].append({
                 "type": "location",
-                "text": f"{t['name'].split()[0]}? That's {t['name']}. Desk in {t['department']}, this floor.",
+                "text": f"{who}? That's {t['name']}. Desk in {t['department']}, this floor.",
                 "fact": {"npc_id": t["id"], "floor": t["floor"]},
             })
         elif adjacent and rng.bool(0.5):
             t = rng.pick(adjacent)
+            who = refer_name(t, npcs)
             npc["knowledge"].append({
                 "type": "location",
                 "text": (
                     f"If you're looking for {t['department']}, try Floor {t['floor']}. "
-                    f"{t['name'].split()[0]} used to sit near there."
+                    f"{who} used to sit near there."
                 ),
                 "fact": {"npc_id": t["id"], "floor": t["floor"], "department": t["department"]},
             })

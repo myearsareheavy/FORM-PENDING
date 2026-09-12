@@ -55,6 +55,7 @@ class SmokeTests(unittest.TestCase):
 
     def test_title_and_overlays(self):
         g = self.game
+        g.fade = 0
         g.state = "title"
         g.draw()
         pygame.image.save(g.screen, str(SHOT_DIR / "title.png"))
@@ -79,6 +80,7 @@ class SmokeTests(unittest.TestCase):
         g = self.game
         g.player["floor"] = 1
         g.ride_elevator(5)
+        g.fade = 0
         self.assertEqual(g.player["floor"], 5)
         self.assertEqual(g.state, "playing")
 

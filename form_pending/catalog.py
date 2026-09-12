@@ -141,17 +141,33 @@ ROLES = [
     "Floor Monitor",
 ]
 
-FIRST_NAMES = [
-    "Janet", "Harold", "Priya", "Marcus", "Elaine", "Omar", "Ruth", "Dennis",
-    "Keisha", "Arthur", "Mei", "Gordon", "Lydia", "Carlos", "Irene", "Nathan",
-    "Sofia", "Walter", "Amina", "Bruce", "Helen", "Dmitri", "Paula", "Glenn",
-    "Yasmin", "Floyd", "Clara", "Ravi", "Doris", "Kenji", "Marta", "Ellis",
-    "Nadine", "Peter", "Hana", "Curtis", "Vera", "Jamal", "Sylvia", "Owen",
-    "Beatrice", "Luis", "Ingrid", "Theo", "Grace", "Abdul", "Faye", "Neil",
-    "Tamara", "Victor", "June", "Samir", "Edith", "Colin", "Rosa", "Hugh",
-    "Anita", "Barry", "Leah", "Ibrahim", "Connie", "Frank", "Noor", "Dale",
-    "Patricia", "Wayne", "Sable", "Chester", "Mira", "Stan", "Gloria", "Ivy",
+FEMININE_NAMES = [
+    "Janet", "Priya", "Elaine", "Ruth", "Keisha", "Mei", "Lydia", "Irene",
+    "Sofia", "Amina", "Helen", "Paula", "Yasmin", "Clara", "Doris", "Marta",
+    "Nadine", "Hana", "Vera", "Sylvia", "Beatrice", "Ingrid", "Grace", "Faye",
+    "Tamara", "Edith", "Rosa", "Anita", "Leah", "Connie", "Patricia", "Mira",
+    "Gloria", "Ivy", "June", "Keiko", "Amara", "Lila", "Denise", "Carol",
 ]
+MASCULINE_NAMES = [
+    "Harold", "Marcus", "Omar", "Dennis", "Arthur", "Gordon", "Carlos", "Nathan",
+    "Walter", "Bruce", "Dmitri", "Glenn", "Floyd", "Ravi", "Kenji", "Peter",
+    "Curtis", "Jamal", "Owen", "Luis", "Theo", "Abdul", "Neil", "Victor",
+    "Samir", "Colin", "Hugh", "Barry", "Ibrahim", "Frank", "Wayne", "Chester",
+    "Stan", "Miles", "Reza", "Tomas", "Felix", "Dwight", "Howard",
+]
+UNISEX_NAMES = [
+    "Alex", "Sam", "Jordan", "Casey", "Riley", "Quinn", "Taylor", "Jamie",
+    "Morgan", "Avery", "Noor", "Sable", "Ellis", "Dale", "Robin", "Cameron",
+    "Kai", "Remy", "Shawn", "Devon",
+]
+FIRST_NAMES = FEMININE_NAMES + MASCULINE_NAMES + UNISEX_NAMES
+
+FEM_HAIR = ["bob", "bun", "ponytail", "part", "short", "afro"]
+MASC_HAIR = ["short", "slick", "bald", "part", "afro"]
+NEUT_HAIR = ["short", "afro", "part", "bob", "slick"]
+FEM_ACCESSORIES = ["none", "glasses", "mug", "clipboard", "badge", "pencil"]
+MASC_ACCESSORIES = ["none", "glasses", "tie", "mug", "clipboard", "badge", "headphones"]
+NEUT_ACCESSORIES = ["none", "glasses", "mug", "clipboard", "badge", "headphones", "pencil"]
 
 LAST_NAMES = [
     "Hargrove", "Pell", "Chaudhary", "Whitlock", "Osborne", "Vega", "Kranz",
@@ -453,22 +469,37 @@ def make_form_code(rng) -> str:
     return f"ANNEX {rng.pick(list('ABCD'))}-{rng.int(1, 12)}"
 
 
-def make_appearance(rng) -> dict:
+def make_appearance(rng, presentation="neutral") -> dict:
+    if presentation == "feminine":
+        hair, acc = FEM_HAIR, FEM_ACCESSORIES
+    elif presentation == "masculine":
+        hair, acc = MASC_HAIR, MASC_ACCESSORIES
+    else:
+        hair, acc = NEUT_HAIR, NEUT_ACCESSORIES
     return {
+        "presentation": presentation,
         "skin": rng.pick(SKIN_TONES),
-        "hair_style": rng.pick(HAIR_STYLES),
+        "hair_style": rng.pick(hair),
         "hair_color": rng.pick(HAIR_COLORS),
         "shirt": rng.pick(SHIRT_COLORS),
-        "accessory": rng.pick(ACCESSORIES),
+        "accessory": rng.pick(acc),
     }
 
 
-def unique_name(rng, used: set) -> str:
+def unique_name(rng, used: set):
+    """Return (full_name, presentation). Presentation follows the first-name pool."""
+    roll = rng.int(0, 9)
+    if roll < 4:
+        presentation, pool = "feminine", FEMININE_NAMES
+    elif roll < 8:
+        presentation, pool = "masculine", MASCULINE_NAMES
+    else:
+        presentation, pool = "neutral", UNISEX_NAMES
     for _ in range(80):
-        name = f"{rng.pick(FIRST_NAMES)} {rng.pick(LAST_NAMES)}"
+        name = f"{rng.pick(pool)} {rng.pick(LAST_NAMES)}"
         if name not in used:
             used.add(name)
-            return name
-    name = f"{rng.pick(FIRST_NAMES)} {rng.pick(LAST_NAMES)} {rng.int(2, 9)}"
+            return name, presentation
+    name = f"{rng.pick(pool)} {rng.pick(LAST_NAMES)} {rng.int(2, 9)}"
     used.add(name)
-    return name
+    return name, presentation

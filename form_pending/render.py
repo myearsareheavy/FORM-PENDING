@@ -12,6 +12,11 @@ from .validate import in_bounds
 HUD_TOP = 58
 HUD_BOTTOM = 78
 
+
+def screen_xy(wx, wy, cam):
+    """World-pixel to screen-pixel. Round only at this step, never before subtracting cam."""
+    return round(wx - cam[0]), round(wy - cam[1] + HUD_TOP)
+
 INK = (36, 32, 28)
 PAPER = (236, 226, 204)
 PAPER_DARK = (214, 200, 170)
@@ -87,33 +92,38 @@ SOLID_PROPS = {
 
 def draw_hair(surf, hx, hy, style, color):
     c = color
-    dark = darken(c, 0.7)
+    dark = darken(c, 0.65)
     if style == "bald":
-        pygame.draw.arc(surf, darken(c, 1.1) if False else (80, 60, 50), (hx - 7, hy - 8, 14, 10), 3.2, 6.2, 1)
+        pygame.draw.arc(surf, (90, 70, 60), (hx - 7, hy - 8, 14, 10), 3.2, 6.2, 1)
         return
     if style == "afro":
-        pygame.draw.circle(surf, c, (hx, hy - 4), 11)
-        pygame.draw.circle(surf, dark, (hx, hy - 4), 11, 1)
+        pygame.draw.circle(surf, c, (hx, hy - 5), 12)
+        pygame.draw.circle(surf, dark, (hx, hy - 5), 12, 1)
         return
     if style == "bun":
-        pygame.draw.ellipse(surf, c, (hx - 8, hy - 8, 16, 10))
-        pygame.draw.circle(surf, c, (hx, hy - 10), 5)
+        pygame.draw.ellipse(surf, c, (hx - 8, hy - 9, 16, 11))
+        pygame.draw.circle(surf, c, (hx, hy - 12), 5)
+        pygame.draw.circle(surf, dark, (hx, hy - 12), 5, 1)
         return
     if style == "bob":
-        pygame.draw.ellipse(surf, c, (hx - 9, hy - 7, 18, 16))
+        pygame.draw.ellipse(surf, c, (hx - 10, hy - 8, 20, 18))
+        pygame.draw.ellipse(surf, c, (hx - 9, hy - 2, 7, 12))
+        pygame.draw.ellipse(surf, c, (hx + 2, hy - 2, 7, 12))
         return
     if style == "ponytail":
-        pygame.draw.ellipse(surf, c, (hx - 7, hy - 8, 14, 10))
-        pygame.draw.ellipse(surf, c, (hx + 4, hy - 2, 8, 14))
+        pygame.draw.ellipse(surf, c, (hx - 8, hy - 9, 16, 11))
+        pygame.draw.ellipse(surf, c, (hx + 5, hy - 1, 7, 16))
+        pygame.draw.circle(surf, dark, (hx + 7, hy + 2), 2)
         return
     if style == "slick":
-        pygame.draw.ellipse(surf, c, (hx - 8, hy - 9, 16, 9))
+        pygame.draw.ellipse(surf, c, (hx - 8, hy - 10, 16, 9))
+        pygame.draw.line(surf, dark, (hx - 6, hy - 6), (hx + 6, hy - 8), 1)
         return
     if style == "part":
-        pygame.draw.ellipse(surf, c, (hx - 8, hy - 8, 16, 10))
-        pygame.draw.line(surf, darken(c, 0.45), (hx - 1, hy - 8), (hx - 1, hy - 2), 1)
+        pygame.draw.ellipse(surf, c, (hx - 8, hy - 9, 16, 11))
+        pygame.draw.line(surf, darken(c, 0.4), (hx - 1, hy - 9), (hx - 1, hy - 2), 1)
         return
-    pygame.draw.ellipse(surf, c, (hx - 8, hy - 8, 16, 9))
+    pygame.draw.ellipse(surf, c, (hx - 8, hy - 9, 16, 10))
 
 
 def draw_accessory(surf, hx, hy, bx, by, acc, shirt):
@@ -143,29 +153,51 @@ def draw_accessory(surf, hx, hy, bx, by, acc, shirt):
 def draw_person(surf, px, py, appearance, visitor=False, facing=0, bob=0):
     """Feet at (px, py)."""
     py = py + int(bob)
-    pygame.draw.ellipse(surf, (0, 0, 0, 40) if False else darken((40, 40, 40), 1), (px - 10, py - 4, 20, 7))
-    body = (70, 92, 128) if visitor else appearance["shirt"]
-    skin = (232, 198, 170) if visitor else appearance["skin"]
-    # legs
-    pygame.draw.rect(surf, darken(body, 0.55), (px - 6, py - 12, 4, 10))
-    pygame.draw.rect(surf, darken(body, 0.55), (px + 2, py - 12, 4, 10))
-    # torso
-    pygame.draw.rect(surf, body, (px - 8, py - 26, 16, 16), border_radius=4)
-    pygame.draw.rect(surf, darken(body, 0.75), (px - 8, py - 26, 16, 16), 1, border_radius=4)
-    # head
-    pygame.draw.circle(surf, skin, (px, py - 32), 7)
-    draw_hair(surf, px, py - 32, appearance.get("hair_style", "short"), appearance.get("hair_color", (40, 30, 20)))
+    pygame.draw.ellipse(surf, (18, 16, 14), (px - 11, py - 5, 22, 8))
+    pres = appearance.get("presentation", "neutral")
+    body = (62, 88, 132) if visitor else appearance["shirt"]
+    skin = (236, 204, 176) if visitor else appearance["skin"]
     if visitor:
-        pygame.draw.rect(surf, STAMP_RED, (px - 3, py - 20, 6, 8))
-        pygame.draw.rect(surf, (240, 220, 80), (px - 2, py - 19, 4, 3))
-        pygame.draw.line(surf, (180, 180, 180), (px, py - 26), (px, py - 20), 1)
+        tw = 18
+    elif pres == "masculine":
+        tw = 18
+    elif pres == "feminine":
+        tw = 14
     else:
-        draw_accessory(surf, px, py - 32, px, py - 20, appearance.get("accessory", "none"), body)
+        tw = 16
+    # legs
+    pygame.draw.rect(surf, darken(body, 0.5), (px - 6, py - 13, 5, 11))
+    pygame.draw.rect(surf, darken(body, 0.5), (px + 1, py - 13, 5, 11))
+    pygame.draw.rect(surf, (30, 28, 26), (px - 6, py - 4, 5, 3))
+    pygame.draw.rect(surf, (30, 28, 26), (px + 1, py - 4, 5, 3))
+    # skirt / coat hem
+    if not visitor and pres == "feminine":
+        pygame.draw.polygon(
+            surf,
+            darken(body, 0.85),
+            [(px - tw // 2 - 2, py - 14), (px + tw // 2 + 2, py - 14), (px + tw // 2 + 5, py - 6), (px - tw // 2 - 5, py - 6)],
+        )
+    # torso
+    torso = pygame.Rect(px - tw // 2, py - 28, tw, 16)
+    pygame.draw.rect(surf, body, torso, border_radius=4)
+    pygame.draw.rect(surf, (20, 16, 14), torso, 1, border_radius=4)
+    # head + outline
+    pygame.draw.circle(surf, (20, 16, 14), (px, py - 34), 9)
+    pygame.draw.circle(surf, skin, (px, py - 34), 8)
+    pygame.draw.circle(surf, (30, 24, 20), (px - 3, py - 34), 1)
+    pygame.draw.circle(surf, (30, 24, 20), (px + 3, py - 34), 1)
+    draw_hair(surf, px, py - 34, appearance.get("hair_style", "short"), appearance.get("hair_color", (40, 30, 20)))
+    if visitor:
+        pygame.draw.line(surf, (210, 210, 214), (px, py - 28), (px, py - 20), 1)
+        pygame.draw.rect(surf, STAMP_RED, (px - 5, py - 22, 10, 11), border_radius=1)
+        pygame.draw.rect(surf, (250, 230, 90), (px - 3, py - 20, 6, 4))
+        pygame.draw.rect(surf, (20, 16, 14), (px - tw // 2 - 1, py - 29, tw + 2, 18), 1, border_radius=4)
+    else:
+        draw_accessory(surf, px, py - 34, px, py - 22, appearance.get("accessory", "none"), body)
 
 
-def draw_prop(surf, prop, origin, defn):
-    x = origin[0] + prop["x"] * TILE
-    y = origin[1] + prop["y"] * TILE
+def draw_prop(surf, prop, cam, defn):
+    x, y = screen_xy(prop["x"] * TILE, prop["y"] * TILE, cam)
     t = prop["type"]
     if t == "plant":
         pygame.draw.rect(surf, (120, 72, 40), (x + 10, y + 18, 12, 10))
@@ -227,81 +259,103 @@ def draw_prop(surf, prop, origin, defn):
         pygame.draw.line(surf, STAMP_RED, (x + 14, y + 10), (x + 18, y + 10), 1)
 
 
-def draw_desk(surf, desk, origin, defn):
-    x = origin[0] + desk["x"] * TILE
-    y = origin[1] + desk["y"] * TILE
-    pygame.draw.rect(surf, (28, 22, 16), (x + 2, y + 6, 42, 26), border_radius=2)
-    pygame.draw.rect(surf, (142, 108, 70), (x + 1, y + 2, 42, 24), border_radius=2)
-    pygame.draw.rect(surf, (40, 44, 48), (x + 26, y + 6, 12, 10), border_radius=1)
-    pygame.draw.rect(surf, (70, 160, 150), (x + 28, y + 8, 8, 5))
-    pygame.draw.rect(surf, PAPER, (x + 6, y + 8, 12, 9))
-    pygame.draw.rect(surf, STAMP_RED, (x + 8, y + 10, 6, 3))
+def draw_desk(surf, desk, cam, defn):
+    x, y = screen_xy(desk["x"] * TILE, desk["y"] * TILE, cam)
+    variant = desk.get("variant", 0)
+    woods = [(142, 108, 70), (168, 132, 88), (96, 86, 78), (120, 78, 52)]
+    wood = woods[variant % 4]
+    pygame.draw.rect(surf, darken(wood, 0.45), (x + 2, y + 8, 44, 22), border_radius=2)
+    pygame.draw.rect(surf, wood, (x + 1, y + 2, 44, 24), border_radius=2)
+    pygame.draw.rect(surf, darken(wood, 0.7), (x + 1, y + 2, 44, 24), 1, border_radius=2)
+    pygame.draw.rect(surf, PAPER, (x + 5, y + 7, 14, 10))
+    pygame.draw.rect(surf, STAMP_RED, (x + 7, y + 9, 7, 3))
+    if variant == 1:
+        pygame.draw.rect(surf, (48, 50, 56), (x + 24, y + 7, 16, 11), border_radius=2)
+        pygame.draw.rect(surf, (90, 160, 150), (x + 26, y + 9, 12, 6))
+    elif variant == 2:
+        pygame.draw.rect(surf, (70, 74, 80), (x + 26, y + 6, 14, 14), border_radius=1)
+        pygame.draw.rect(surf, (200, 80, 70), (x + 28, y + 8, 10, 3))
+        pygame.draw.rect(surf, PAPER, (x + 28, y + 12, 10, 5))
+    elif variant == 3:
+        pygame.draw.rect(surf, (40, 44, 48), (x + 28, y + 5, 11, 12), border_radius=1)
+        pygame.draw.rect(surf, (80, 150, 140), (x + 30, y + 7, 7, 6))
+        pygame.draw.circle(surf, (46, 110, 62), (x + 16, y + 16), 4)
+    else:
+        pygame.draw.rect(surf, (40, 44, 48), (x + 26, y + 5, 13, 12), border_radius=1)
+        pygame.draw.rect(surf, (70, 160, 150), (x + 28, y + 7, 9, 6))
 
 
 def draw_world(surf, world, floor_index, player, cam, fonts: Fonts):
     floor = world["floors"][floor_index - 1]
     defn = floor["def"]
     grid = floor["grid"]
-    ox = int(round(-cam[0]))
-    oy = int(round(-cam[1] + HUD_TOP))
 
     surf.fill(defn["corridor"])
 
-    # tiles (+1 overlap hides camera seams)
+    # tiles (+1 overlap hides residual round() gaps between neighbors)
     for y in range(MAP_H):
         for x in range(MAP_W):
             t = grid[y][x]["t"]
-            px = ox + x * TILE
-            py = oy + y * TILE
+            px, py = screen_xy(x * TILE, y * TILE, cam)
             if t == "wall":
                 continue
+            if t == "elevator":
+                pygame.draw.rect(surf, (42, 40, 38), (px, py, TILE + 1, TILE + 1))
+                continue
+            if t == "door":
+                pygame.draw.rect(surf, lighten(defn["corridor"], 0.08), (px, py, TILE + 1, TILE + 1))
+                continue
             if t == "corridor":
-                col = defn["corridor"]
-            elif t == "door":
-                col = lighten(defn["corridor"], 0.12)
-            elif t == "elevator":
-                col = (48, 46, 42)
-            else:
-                col = defn["carpet"]
-            pygame.draw.rect(surf, col, (px, py, TILE + 1, TILE + 1))
+                pygame.draw.rect(surf, defn["corridor"], (px, py, TILE + 1, TILE + 1))
+                if y == 15:
+                    pygame.draw.rect(surf, darken(defn["accent"], 0.55), (px, py + 13, TILE + 1, 5))
+                continue
+            pygame.draw.rect(surf, defn["carpet"], (px, py, TILE + 1, TILE + 1))
+            if ((x * 7 + y * 3) % 5) == 0:
+                pygame.draw.rect(surf, defn["carpet_alt"], (px + 9, py + 11, 4, 3))
 
     # painted floor number in lobby
     num = fonts.floor_paint.render(str(floor_index), True, defn["accent"])
     num.set_alpha(40)
-    surf.blit(num, (ox + 9 * TILE, oy + 12 * TILE))
+    nx, ny = screen_xy(9 * TILE, 12 * TILE, cam)
+    surf.blit(num, (nx, ny))
 
     # elevator cabin
-    ex = ox + floor["elevator"]["tx"] * TILE
-    ey = oy + floor["elevator"]["ty"] * TILE
+    ex, ey = screen_xy(floor["elevator"]["tx"] * TILE, floor["elevator"]["ty"] * TILE, cam)
     ew = floor["elevator"]["tw"] * TILE
     eh = floor["elevator"]["th"] * TILE
-    pygame.draw.rect(surf, (58, 54, 48), (ex, ey, ew, eh))
-    pygame.draw.rect(surf, BRASS, (ex + 4, ey + 4, ew - 8, eh - 8), 2)
-    pygame.draw.line(surf, BRASS, (ex + ew // 2, ey + 6), (ex + ew // 2, ey + eh - 6), 2)
-    blit_text(surf, fonts.tiny, "ELEV", (ex + 10, ey + eh // 2 - 6), BRASS)
+    pygame.draw.rect(surf, (32, 30, 28), (ex - 2, ey - 2, ew + 4, eh + 4))
+    pygame.draw.rect(surf, (58, 56, 52), (ex, ey, ew, eh))
+    pygame.draw.rect(surf, BRASS, (ex + 3, ey + 3, ew - 6, eh - 6), 3)
+    pygame.draw.line(surf, (90, 86, 78), (ex + ew // 2, ey + 8), (ex + ew // 2, ey + eh - 8), 3)
+    pygame.draw.rect(surf, (20, 18, 16), (ex + 8, ey + 10, ew - 16, 16))
+    blit_text(surf, fonts.tiny, f"FL {floor_index}", (ex + ew // 2, ey + 18), BRASS, center=True)
 
     # walls as solid partitions (north highlight only — no stacked-lip stripes)
     wall = defn["trim"]
-    lip = lighten(defn["wall"], 0.1)
+    lip = lighten(defn["wall"], 0.18)
     for y in range(MAP_H):
         for x in range(MAP_W):
             if grid[y][x]["t"] != "wall":
                 continue
-            px = ox + x * TILE
-            py = oy + y * TILE
+            px, py = screen_xy(x * TILE, y * TILE, cam)
             pygame.draw.rect(surf, wall, (px, py, TILE + 1, TILE + 1))
             if y == 0 or grid[y - 1][x]["t"] != "wall":
-                pygame.draw.rect(surf, lip, (px, py, TILE + 1, 4))
+                pygame.draw.rect(surf, lip, (px, py, TILE + 1, 5))
+            # baseboard where the wall faces open floor
+            if y + 1 < MAP_H and grid[y + 1][x]["t"] in ("floor", "corridor", "desk", "door"):
+                pygame.draw.rect(surf, darken(wall, 0.65), (px, py + TILE - 5, TILE + 1, 5))
 
-    # doors as openings with a dark jamb
+    # doors: jamb + a half-open slab
     for y in range(MAP_H):
         for x in range(MAP_W):
             if grid[y][x]["t"] != "door":
                 continue
-            px = ox + x * TILE
-            py = oy + y * TILE
-            pygame.draw.rect(surf, lighten(defn["corridor"], 0.08), (px, py, TILE + 1, TILE + 1))
-            pygame.draw.rect(surf, wall, (px, py, TILE + 1, TILE + 1), 2)
+            px, py = screen_xy(x * TILE, y * TILE, cam)
+            pygame.draw.rect(surf, lighten(defn["corridor"], 0.1), (px, py, TILE + 1, TILE + 1))
+            pygame.draw.rect(surf, wall, (px, py, TILE + 1, TILE + 1), 3)
+            pygame.draw.rect(surf, darken(defn["wall"], 0.85), (px + 4, py + 3, 10, TILE - 6), border_radius=1)
+            pygame.draw.circle(surf, BRASS, (px + 12, py + TILE // 2), 2)
 
     # desks + cubicle rails
     npc_at = {}
@@ -309,11 +363,10 @@ def draw_world(surf, world, floor_index, player, cam, fonts: Fonts):
         if npc["floor"] == floor_index and npc.get("desk"):
             npc_at[(npc["desk"]["x"], npc["desk"]["y"])] = npc
     for desk in floor["desks"]:
-        dx = ox + desk["x"] * TILE
-        dy = oy + desk["y"] * TILE
+        dx, dy = screen_xy(desk["x"] * TILE, desk["y"] * TILE, cam)
         pygame.draw.rect(surf, darken(defn["trim"], 0.85), (dx - 2, dy - 2, TILE * 2 - 4, 6))
         pygame.draw.rect(surf, darken(defn["trim"], 0.85), (dx - 2, dy - 2, 6, TILE - 4))
-        draw_desk(surf, desk, (ox, oy), defn)
+        draw_desk(surf, desk, cam, defn)
         npc = npc_at.get((desk["x"], desk["y"]))
         if npc:
             last = npc["name"].split()[-1].upper()
@@ -324,7 +377,7 @@ def draw_world(surf, world, floor_index, player, cam, fonts: Fonts):
 
     # props
     for prop in floor["props"]:
-        draw_prop(surf, prop, (ox, oy), defn)
+        draw_prop(surf, prop, cam, defn)
 
     # room plaques near the center of each department
     sums = {}
@@ -341,8 +394,7 @@ def draw_world(surf, world, floor_index, player, cam, fonts: Fonts):
         cx, cy = sx // n, sy // n
         name = next((r["name"] for r in floor["rooms"] if r.get("dept") == dept), dept)
         label = fonts.tiny.render(name.upper(), True, defn["trim"])
-        px = ox + cx * TILE
-        py = oy + cy * TILE
+        px, py = screen_xy(cx * TILE, cy * TILE, cam)
         pygame.draw.rect(surf, PAPER, (px + 2, py + 2, label.get_width() + 8, 14), border_radius=2)
         pygame.draw.rect(surf, defn["trim"], (px + 2, py + 2, label.get_width() + 8, 14), 1, border_radius=2)
         surf.blit(label, (px + 6, py + 3))
@@ -356,37 +408,33 @@ def draw_world(surf, world, floor_index, player, cam, fonts: Fonts):
     people.append(("player", player["y"], player))
     people.sort(key=lambda p: p[1])
     for kind, _y, obj in people:
+        px, py = screen_xy(obj["x"] * TILE, obj["y"] * TILE, cam)
         if kind == "player":
-            px = ox + obj["x"] * TILE
-            py = oy + obj["y"] * TILE
-            bob = 0
-            if player.get("moving"):
-                bob = int(2 * math.sin(player.get("walk_t", 0) * 14))
-            draw_person(surf, int(px), int(py), obj["appearance"], visitor=True, bob=bob)
+            draw_person(surf, px, py, obj["appearance"], visitor=True)
         else:
-            px = ox + obj["x"] * TILE
-            py = oy + obj["y"] * TILE
             if obj.get("out_to_lunch"):
-                sign = pygame.Rect(int(px) - 28, int(py) - 22, 56, 16)
+                sign = pygame.Rect(px - 28, py - 22, 56, 16)
                 pygame.draw.rect(surf, PAPER, sign)
                 pygame.draw.rect(surf, STAMP_RED, sign, 1)
                 blit_text(surf, fonts.tiny, "OUT TO LUNCH", (sign.centerx, sign.centery), STAMP_RED, center=True)
                 continue
-            draw_person(surf, int(px), int(py), obj["appearance"], visitor=False)
+            draw_person(surf, px, py, obj["appearance"], visitor=False)
             dx = obj["x"] - player["x"]
             dy = obj["y"] - player["y"]
             if dx * dx + dy * dy < 3.5:
                 name = obj["name"].split()[0]
                 img = fonts.tiny.render(name, True, INK)
                 tag = img.get_rect()
-                tag.midbottom = (int(px), int(py) - 44)
+                tag.midbottom = (px, py - 44)
                 pygame.draw.rect(surf, PAPER, tag.inflate(8, 4), border_radius=2)
                 surf.blit(img, tag)
 
     # north windows
-    pygame.draw.rect(surf, (40, 70, 90), (ox + TILE, oy + 2, (MAP_W - 2) * TILE, 8))
+    wx, wy = screen_xy(TILE, 2, cam)
+    pygame.draw.rect(surf, (40, 70, 90), (wx, wy, (MAP_W - 2) * TILE, 8))
     for x in range(2, MAP_W - 2, 3):
-        pygame.draw.rect(surf, (170, 200, 214), (ox + x * TILE, oy + 3, TILE + 8, 6))
+        wx, wy = screen_xy(x * TILE, 3, cam)
+        pygame.draw.rect(surf, (170, 200, 214), (wx, wy, TILE + 8, 6))
 
     return floor
 
